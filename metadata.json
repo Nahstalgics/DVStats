@@ -1,0 +1,6 @@
+{
+  "name": "Pipeline Corrosion Left-Censored KDE Modeler",
+  "description": "Statistical modeling tool for pipeline OD corrosion depths with left-censoring threshold handling, non-parametric kernel density estimation, and parametric distribution comparisons (Lognormal, Gamma, Weibull, Exponential) with high-res export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
