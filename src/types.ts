@@ -107,4 +107,4 @@ export interface ModelRunResults {
   pipeODRef: number;
 }
 
-export type PlotType = 'pdf' | 'survival';
+export type PlotType = 'pdf' | 'histogram' | 'survival';

@@ -80,6 +80,7 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
     const margin = { top: 60, right: 140, bottom: 65, left: 68 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
+    const candidateTypes: ParametricDistributionType[] = ['lognormal', 'gamma', 'weibull', 'exponential'];
 
     // Draw Plot Background
     ctx.fillStyle = plotBgColor;
@@ -99,6 +100,9 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
       const kdeMax = Math.max(...results.kde.points.map((p) => p.density));
       const histMax = Math.max(...results.histogramBins.map((b) => b.density));
       yMax = Math.max(kdeMax, histMax, 0.1) * 1.25;
+    } else if (plotType === 'histogram') {
+      const histMax = Math.max(...results.histogramBins.map((b) => b.density));
+      yMax = Math.max(histMax, 0.1) * 1.35;
     } else {
       yMax = 1.05; // for Survival / Exceedance
     }
@@ -210,8 +214,8 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
       });
     }
 
-    // 4. Histogram Bars (PDF mode only)
-    if (plotType === 'pdf') {
+    // 4. Histogram Bars (PDF and Histogram modes)
+    if (plotType === 'pdf' || plotType === 'histogram') {
       results.histogramBins.forEach((bin) => {
         const x0 = scaleX(bin.x0);
         const x1 = scaleX(bin.x1);
@@ -228,78 +232,81 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
       });
     }
 
-    // 5. Draw Parametric Models First (Background layers)
-    const candidateTypes: ParametricDistributionType[] = ['lognormal', 'gamma', 'weibull', 'exponential'];
-    candidateTypes.forEach((dtype) => {
-      const fit = results.parametricFits[dtype];
-      if (fit && fit.enabled) {
-        ctx.save();
-        ctx.strokeStyle = fit.color;
-        ctx.lineWidth = 2.2;
+    // 5. Draw Parametric Models First (Background layers) - skip in histogram mode to keep it simple
+    if (plotType !== 'histogram') {
+      candidateTypes.forEach((dtype) => {
+        const fit = results.parametricFits[dtype];
+        if (fit && fit.enabled) {
+          ctx.save();
+          ctx.strokeStyle = fit.color;
+          ctx.lineWidth = 2.2;
 
-        if (dtype === 'gamma') ctx.setLineDash([6, 3]);
-        else if (dtype === 'weibull') ctx.setLineDash([3, 3]);
-        else if (dtype === 'exponential') ctx.setLineDash([8, 2, 2, 2]);
+          if (dtype === 'gamma') ctx.setLineDash([6, 3]);
+          else if (dtype === 'weibull') ctx.setLineDash([3, 3]);
+          else if (dtype === 'exponential') ctx.setLineDash([8, 2, 2, 2]);
 
-        ctx.beginPath();
-        let isFirst = true;
+          ctx.beginPath();
+          let isFirst = true;
 
-        for (let i = 0; i <= 200; i++) {
-          const x = (i / 200) * xMax;
+          for (let i = 0; i <= 200; i++) {
+            const x = (i / 200) * xMax;
+            let yVal = 0;
+            if (plotType === 'pdf') yVal = fit.evaluatePdf(x);
+            else yVal = fit.evaluateSurvival(x);
+
+            const px = scaleX(x);
+            const py = scaleY(yVal);
+
+            if (isFirst) {
+              ctx.moveTo(px, py);
+              isFirst = false;
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+    }
+
+    // 6. Draw Primary Non-Parametric Left-Censored KDE Curve (Highlighted in Safety Orange)
+    if (plotType !== 'histogram') {
+      ctx.save();
+      ctx.strokeStyle = '#ff7700'; // Safety orange
+      ctx.lineWidth = 3.6;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      // Outer glow for dark theme
+      if (isDark || isTransparent) {
+        ctx.shadowColor = 'rgba(255, 107, 0, 0.45)';
+        ctx.shadowBlur = 10;
+      }
+
+      ctx.beginPath();
+      let isFirstKde = true;
+
+      results.kde.points.forEach((pt) => {
+        if (pt.x <= xMax) {
           let yVal = 0;
-          if (plotType === 'pdf') yVal = fit.evaluatePdf(x);
-          else yVal = fit.evaluateSurvival(x);
+          if (plotType === 'pdf') yVal = pt.density;
+          else yVal = pt.survival;
 
-          const px = scaleX(x);
+          const px = scaleX(pt.x);
           const py = scaleY(yVal);
 
-          if (isFirst) {
+          if (isFirstKde) {
             ctx.moveTo(px, py);
-            isFirst = false;
+            isFirstKde = false;
           } else {
             ctx.lineTo(px, py);
           }
         }
-        ctx.stroke();
-        ctx.restore();
-      }
-    });
-
-    // 6. Draw Primary Non-Parametric Left-Censored KDE Curve (Highlighted in Safety Orange)
-    ctx.save();
-    ctx.strokeStyle = '#ff7700'; // Safety orange
-    ctx.lineWidth = 3.6;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-
-    // Outer glow for dark theme
-    if (isDark || isTransparent) {
-      ctx.shadowColor = 'rgba(255, 107, 0, 0.45)';
-      ctx.shadowBlur = 10;
+      });
+      ctx.stroke();
+      ctx.restore();
     }
-
-    ctx.beginPath();
-    let isFirstKde = true;
-
-    results.kde.points.forEach((pt) => {
-      if (pt.x <= xMax) {
-        let yVal = 0;
-        if (plotType === 'pdf') yVal = pt.density;
-        else yVal = pt.survival;
-
-        const px = scaleX(pt.x);
-        const py = scaleY(yVal);
-
-        if (isFirstKde) {
-          ctx.moveTo(px, py);
-          isFirstKde = false;
-        } else {
-          ctx.lineTo(px, py);
-        }
-      }
-    });
-    ctx.stroke();
-    ctx.restore();
 
     // 7. Title and Axis Labels
     ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
@@ -308,7 +315,9 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
     const viewTitle =
       plotType === 'pdf'
         ? 'Left-Censored Probability Density Function f(d)'
-        : 'Exceedance Reliability / Burst Survival P(D > d)';
+        : plotType === 'histogram'
+          ? 'Simple Depth Histogram (Censored Observations Included)'
+          : 'Exceedance Reliability / Burst Survival P(D > d)';
 
     ctx.fillText(`Pipeline OD Corrosion Depth: ${viewTitle}`, margin.left, margin.top - 32);
 
@@ -334,7 +343,9 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
     const yAxisLabel =
       plotType === 'pdf'
         ? 'Probability Density f(d) [1/mm]'
-        : 'Exceedance Probability P(D > d)';
+        : plotType === 'histogram'
+          ? 'Relative Frequency Density'
+          : 'Exceedance Probability P(D > d)';
     ctx.fillText(yAxisLabel, 0, 0);
     ctx.restore();
 
@@ -393,7 +404,7 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
       }
     });
 
-    if (plotType === 'pdf') {
+    if (plotType === 'pdf' || plotType === 'histogram') {
       ctx.fillStyle = histFillColor;
       ctx.fillRect(legendX, legendY - 4, 14, 10);
       ctx.strokeStyle = histBorderColor;

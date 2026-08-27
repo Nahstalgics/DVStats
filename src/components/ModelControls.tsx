@@ -363,7 +363,7 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
         </div>
       </div>
 
-      {/* Plot Type Tabs (Density / Exceedance) */}
+      {/* Plot Type Tabs (Density / Histogram / Exceedance) */}
       <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center space-x-2">
           <span className="text-[10px] uppercase tracking-widest text-orange-500 font-mono mr-1">
@@ -381,6 +381,18 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
               }`}
             >
               Density f(x)
+            </button>
+            <button
+              id="plot-tab-histogram"
+              type="button"
+              onClick={() => onChangePlotType('histogram')}
+              className={`px-3 py-1 text-xs font-mono uppercase tracking-wider rounded transition-colors cursor-pointer ${
+                plotType === 'histogram'
+                  ? 'bg-orange-600 text-black font-bold shadow'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Histogram
             </button>
             <button
               id="plot-tab-survival"

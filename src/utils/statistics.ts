@@ -936,8 +936,9 @@ export function runCorrosionStatisticalAnalysis(
   candidates.sort((a, b) => a.aic - b.aic);
   const bestFitType: ParametricDistributionType = candidates[0].type;
 
-  // Build empirical histogram bins
-  const numBins = 24;
+  // Build empirical histogram bins with a tighter bin width for a more detailed view.
+  // 24 bins was a bit coarse; 40 provides a noticeably smoother/simple histogram without becoming noisy.
+  const numBins = 40;
   const binWidth = domainMax / numBins;
   const histogramBins: ModelRunResults['histogramBins'] = [];
 
