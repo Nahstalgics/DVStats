@@ -162,27 +162,35 @@ export const ModelMetricsTable: React.FC<ModelMetricsTableProps> = ({
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs">
         <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
           <div className="flex items-center space-x-2 text-zinc-300 font-bold uppercase tracking-wider text-[11px]">
-            <Gauge className="w-4 h-4 text-orange-500" />
-            <span>95th Percentile Depth (P95)</span>
+            <ShieldAlert className="w-4 h-4 text-orange-500" />
+            <span>Action-Threshold Exceedance</span>
           </div>
-          <div className="text-xl font-bold text-orange-400 font-mono mt-2">
-            {results.kde.percentiles.p95.toFixed(2)} mm
+          <div className="mt-2 space-y-2 font-mono">
+            {[0.8, 1.2, 1.6, 2.0].map((threshold) => {
+              const exceedance = results.kde.evaluateSurvival(threshold) * 100;
+              return (
+                <div key={threshold} className="flex items-center justify-between text-[11px] text-zinc-200">
+                  <span>P(D &gt; {threshold.toFixed(1)} mm)</span>
+                  <span className="text-orange-400 font-bold">{exceedance.toFixed(1)}%</span>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-[11px] text-zinc-500 font-mono mt-1">
-            95% of all outer surface corrosions (including nominals) do not exceed this depth.
+          <p className="text-[11px] text-zinc-500 font-mono mt-2">
+            Estimated share of defects above operational corrosion thresholds used in screening.
           </p>
         </div>
 
         <div className="bg-zinc-900/50 p-4 rounded border border-zinc-800">
           <div className="flex items-center space-x-2 text-zinc-300 font-bold uppercase tracking-wider text-[11px]">
-            <ShieldAlert className="w-4 h-4 text-orange-500" />
-            <span>Severe Corrosion Risk (&gt; 2.0 mm)</span>
+            <Gauge className="w-4 h-4 text-orange-500" />
+            <span>90th Percentile Depth (P90)</span>
           </div>
           <div className="text-xl font-bold text-orange-400 font-mono mt-2">
-            {(results.kde.evaluateSurvival(2.0) * 100).toFixed(1)}%
+            {results.kde.percentiles.p90.toFixed(2)} mm
           </div>
           <p className="text-[11px] text-zinc-500 font-mono mt-1">
-            Estimated probability of encountering a defect depth greater than 2.0 mm across the line.
+            90% of corrosion depths are below this level; the upper tail is more severe than the median.
           </p>
         </div>
 

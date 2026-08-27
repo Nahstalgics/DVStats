@@ -1,15 +1,14 @@
 import React from 'react';
-import { BookOpen, Code } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import logo from '../assets/od-corrosion-logo.png';
 
 interface HeaderProps {
-  onOpenPythonModal: () => void;
   onOpenTheoryModal: () => void;
   isModelReady: boolean;
   totalRecords: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  onOpenPythonModal,
   onOpenTheoryModal,
   isModelReady,
   totalRecords,
@@ -18,16 +17,17 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-4 border-b border-orange-900/40 bg-zinc-950 text-gray-300 font-sans sticky top-0 z-30 shadow-2xl backdrop-blur-md">
       {/* Brand / Title */}
       <div className="flex items-center space-x-4 mb-3 sm:mb-0">
-        <div className="w-8 h-8 bg-orange-600 rounded flex items-center justify-center shadow-[0_0_15px_rgba(234,88,12,0.3)]">
-          <span className="text-black font-bold text-xl">K</span>
-        </div>
+        <img
+          src={logo}
+          alt="OD corrosion eye logo"
+          className="h-10 w-10 object-contain drop-shadow-[0_0_14px_rgba(234,88,12,0.35)]"
+        />
         <div>
           <h1 className="text-xl font-medium tracking-tight text-white flex items-center gap-2">
-            <span>CENSORED-KDE</span>
-            <span className="text-orange-500 font-light italic">Pipeline Analysis</span>
+            <span className="text-orange-500 font-light italic">Statistical analysis for OD corrosion</span>
           </h1>
           <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">
-            OD Pipeline Integrity · 0.80mm Left-Censored Non-Parametric & MLE Framework
+            CENSORED-KDE · Pipeline Analysis
           </p>
         </div>
       </div>
@@ -42,18 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
             {isModelReady ? `ENGINE_READY_${totalRecords}_PTS` : 'ENGINE_STANDBY'}
           </span>
         </div>
-
-        {/* Python Code Export Button */}
-        <button
-          id="view-python-script-btn"
-          type="button"
-          onClick={onOpenPythonModal}
-          className="px-3 py-1.5 border border-orange-500/50 text-orange-500 text-xs font-mono uppercase tracking-wider hover:bg-orange-500/10 transition-colors rounded flex items-center gap-1.5 cursor-pointer"
-          title="Generate Python script using SciPy and Matplotlib"
-        >
-          <Code className="w-3.5 h-3.5 text-orange-500" />
-          <span>Python (.py)</span>
-        </button>
 
         {/* Theory / Methodology Button */}
         <button

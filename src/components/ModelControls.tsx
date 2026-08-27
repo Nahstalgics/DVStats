@@ -57,9 +57,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             <h2 className="text-xs uppercase tracking-widest text-zinc-300 border-l-2 border-orange-500 pl-3 font-semibold">
               2. Censoring Threshold & Modeling Parameters
             </h2>
-            <p className="text-[11px] text-zinc-500 font-mono mt-1 pl-3.5">
-              Set the 0.80mm nominal threshold and select theoretical candidate distributions to fit.
-            </p>
           </div>
         </div>
 
@@ -97,10 +94,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                 {censoringConfig.threshold.toFixed(2)}mm
               </span>
             </div>
-            <p className="text-[10px] text-zinc-500 font-mono leading-relaxed">
-              Values below or equal to {censoringConfig.threshold.toFixed(2)}mm are treated as nominal (Left-Censored).
-            </p>
-
             <div className="mt-4 space-y-3">
               <div>
                 <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-1">
@@ -148,10 +141,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             </div>
           </div>
 
-          <div className="mt-4 p-3 bg-orange-950/20 border border-orange-900/40 rounded text-[10px] text-zinc-400 font-mono leading-relaxed">
-            <span className="text-orange-500 font-bold uppercase block mb-1">Censoring Note</span>
-            Left-censoring at {censoringConfig.threshold.toFixed(2)}mm redistributes probability mass strictly over [0, {censoringConfig.threshold.toFixed(2)}]mm via EM formulation.
-          </div>
         </div>
 
         {/* Middle Column: Non-Parametric KDE Engine (4 cols) */}
@@ -212,7 +201,11 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                   </button>
                 </div>
 
-                {/* Bandwidth Multiplier Slider */}
+                {/*
+                  Tidbit: the bandwidth multiplier acts like a narrowing factor.
+                  Values below 1.0 make the KDE curve tighter and more responsive to local variation;
+                  values above 1.0 smooth the density more aggressively for a cleaner executive view.
+                */}
                 <div className="mt-2.5">
                   <div className="flex justify-between text-[10px] text-zinc-600 font-mono">
                     <span>Narrow (0.5x)</span>
@@ -233,6 +226,9 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                     }
                     className="w-full accent-orange-500 cursor-pointer h-1.5 bg-zinc-800 rounded mt-1"
                   />
+                  <div className="mt-1 text-[9px] text-zinc-500 font-mono">
+                    Narrowing factor: lower = tighter fit, higher = smoother curve. Typical start: 1.0–1.5x.
+                  </div>
                 </div>
               </div>
 
@@ -261,9 +257,6 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
             </div>
           </div>
 
-          <div className="mt-3 p-2 bg-zinc-950 border border-zinc-800 rounded text-[10px] font-mono text-zinc-500">
-            Boundary correction: Left-censored interval mass folding
-          </div>
         </div>
 
         {/* Right Column: Comparative Models (4 cols) */}

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import {
   ChevronDown,
@@ -37,7 +37,39 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [wallThicknessDraft, setWallThicknessDraft] = useState<string>(String(wallThickness));
+  const [pipeODDraft, setPipeODDraft] = useState<string>(String(pipeOD));
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setWallThicknessDraft(String(wallThickness));
+  }, [wallThickness]);
+
+  useEffect(() => {
+    setPipeODDraft(String(pipeOD));
+  }, [pipeOD]);
+
+  const commitWallThickness = () => {
+    const trimmed = wallThicknessDraft.trim();
+    const parsed = trimmed === '' ? 0 : Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setWallThicknessDraft(String(wallThickness));
+      return;
+    }
+    onUpdateWallThickness(parsed);
+    setWallThicknessDraft(String(parsed));
+  };
+
+  const commitPipeOD = () => {
+    const trimmed = pipeODDraft.trim();
+    const parsed = trimmed === '' ? 0 : Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setPipeODDraft(String(pipeOD));
+      return;
+    }
+    onUpdatePipeOD(parsed);
+    setPipeODDraft(String(parsed));
+  };
 
   const handleFileUpload = (file: File) => {
     Papa.parse(file, {
@@ -104,9 +136,6 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-zinc-500 font-mono mt-1 pl-3.5">
-              Upload your inspection CSV and select the single depth column for left-censored modeling.
-            </p>
           </div>
         </div>
 
@@ -247,8 +276,15 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
                 type="number"
                 min="0"
                 step="0.1"
-                value={wallThickness}
-                onChange={(e) => onUpdateWallThickness(Number(e.target.value))}
+                value={wallThicknessDraft}
+                onChange={(e) => setWallThicknessDraft(e.target.value)}
+                onBlur={commitWallThickness}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
                 className="w-full bg-zinc-950 border border-zinc-700 text-xs p-2.5 rounded focus:border-orange-500 outline-none text-zinc-100 font-mono"
               />
             </div>
@@ -260,8 +296,15 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
                 type="number"
                 min="0"
                 step="0.1"
-                value={pipeOD}
-                onChange={(e) => onUpdatePipeOD(Number(e.target.value))}
+                value={pipeODDraft}
+                onChange={(e) => setPipeODDraft(e.target.value)}
+                onBlur={commitPipeOD}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
                 className="w-full bg-zinc-950 border border-zinc-700 text-xs p-2.5 rounded focus:border-orange-500 outline-none text-zinc-100 font-mono"
               />
             </div>

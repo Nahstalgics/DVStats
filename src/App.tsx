@@ -18,7 +18,6 @@ import { DataIngestion } from './components/DataIngestion';
 import { ModelControls } from './components/ModelControls';
 import { VisualizationCanvas } from './components/VisualizationCanvas';
 import { ModelMetricsTable } from './components/ModelMetricsTable';
-import { PythonCodeModal } from './components/PythonCodeModal';
 import { TheoryModal } from './components/TheoryModal';
 
 export default function App() {
@@ -69,7 +68,6 @@ export default function App() {
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
 
   // Modals
-  const [isPythonModalOpen, setIsPythonModalOpen] = useState(false);
   const [isTheoryModalOpen, setIsTheoryModalOpen] = useState(false);
 
   // Execute Left-Censored KDE & Parametric Fits
@@ -165,7 +163,6 @@ export default function App() {
     <div className="min-h-screen bg-black text-gray-300 font-sans selection:bg-orange-500 selection:text-black">
       {/* Technical Industrial Header */}
       <Header
-        onOpenPythonModal={() => setIsPythonModalOpen(true)}
         onOpenTheoryModal={() => setIsTheoryModalOpen(true)}
         isModelReady={results !== null}
         totalRecords={results?.totalCount || csvData.length}
@@ -228,16 +225,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Python Code Export Modal */}
-      <PythonCodeModal
-        isOpen={isPythonModalOpen}
-        onClose={() => setIsPythonModalOpen(false)}
-        fileName={fileName}
-        columnMapping={columnMapping}
-        censoringConfig={censoringConfig}
-        kdeConfig={kdeConfig}
-      />
 
       {/* Theory & Left-Censoring Methodology Modal */}
       <TheoryModal
