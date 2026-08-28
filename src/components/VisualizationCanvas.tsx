@@ -563,19 +563,6 @@ export const VisualizationCanvas: React.FC<VisualizationCanvasProps> = ({
 
         {/* Action Buttons: Copy Image & Download */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-          {/* Theme Selector for Export */}
-          <select
-            id="select-export-theme"
-            value={exportTheme}
-            onChange={(e) => setExportTheme(e.target.value as any)}
-            className="bg-zinc-900 text-zinc-300 text-xs font-mono rounded border border-zinc-800 px-2.5 py-1.5 outline-none focus:border-orange-500"
-            title="Theme for copied/downloaded image"
-          >
-            <option value="dark">Dark Industrial</option>
-            <option value="light">Publication White</option>
-            <option value="transparent">Transparent Canvas</option>
-          </select>
-
           {/* Copy Image Button */}
           <button
             id="copy-image-btn"

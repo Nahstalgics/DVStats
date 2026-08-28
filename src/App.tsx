@@ -22,6 +22,7 @@ import { TheoryModal } from './components/TheoryModal';
 
 export default function App() {
   // Data State
+  const [rawCsvData, setRawCsvData] = useState<any[]>([]);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [fileName, setFileName] = useState<string>('');
@@ -66,6 +67,20 @@ export default function App() {
   const [results, setResults] = useState<ModelRunResults | null>(null);
   const [plotType, setPlotType] = useState<PlotType>('pdf');
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
+
+  const maxApprovedObservedDepth = csvData.reduce((maxDepth, row) => {
+    const rawDepth = row[columnMapping.depthColumn];
+    if (rawDepth === undefined || rawDepth === null || rawDepth === '') {
+      return maxDepth;
+    }
+
+    const numericDepth = typeof rawDepth === 'number' ? rawDepth : Number.parseFloat(String(rawDepth).replace(/[^\d.-]/g, ''));
+    if (!Number.isFinite(numericDepth)) {
+      return maxDepth;
+    }
+
+    return Math.max(maxDepth, numericDepth);
+  }, 0);
 
   // Modals
   const [isTheoryModalOpen, setIsTheoryModalOpen] = useState(false);
@@ -124,9 +139,13 @@ export default function App() {
   // Handle Raw CSV file loaded from computer
   const handleRawCsvLoaded = (data: any[], name: string) => {
     if (!data || data.length === 0) return;
-    const parsedCols = Object.keys(data[0] as object);
+
+    const filteredData = filterCorrosionRows(data);
+    const parsedCols = Object.keys((data[0] || filteredData[0] || {}) as object);
+
+    setRawCsvData(data);
     setColumns(parsedCols);
-    setCsvData(data);
+    setCsvData(filteredData);
     setFileName(name);
 
     // Auto-detect depth column
@@ -140,7 +159,60 @@ export default function App() {
     };
 
     setColumnMapping(newMapping);
-    executeAnalysis(data, newMapping, censoringConfig, kdeConfig, wallThickness, pipeOD);
+    executeAnalysis(filteredData, newMapping, censoringConfig, kdeConfig, wallThickness, pipeOD);
+  };
+
+  const normalizeCell = (value: unknown): string => {
+    if (value === undefined || value === null) return '';
+    return String(value).trim();
+  };
+
+  const normalizeToken = (value: string): string => value.replace(/[\s_-]+/g, '').toUpperCase();
+
+  const filterCorrosionRows = (rows: any[]) => {
+    if (!rows || rows.length === 0) return rows;
+
+    const wallLocationKey = Object.keys(rows[0] || {}).find((key) =>
+      /wall.*(loc|position)|loc.*wall|wall[-_ ]?location|location/i.test(key)
+    );
+    const statusKey = Object.keys(rows[0] || {}).find((key) =>
+      /status|approval|state/i.test(key)
+    );
+
+    return rows.filter((row) => {
+      const wallLocation = wallLocationKey ? normalizeCell(row[wallLocationKey]) : '';
+      const status = statusKey ? normalizeCell(row[statusKey]) : '';
+
+      const wallLocationValue = normalizeToken(wallLocation);
+      const statusValue = normalizeToken(status);
+
+      const hasWallLocation = wallLocationValue.length > 0;
+      const hasStatusColumn = statusKey !== undefined;
+      const isAllowedStatus =
+        !hasStatusColumn ||
+        statusValue === 'APPROVED' ||
+        statusValue === 'APPROVEDNOTSIZED' ||
+        statusValue === 'APPROVEDNOSIZED';
+
+      const isExternal =
+        wallLocationValue.includes('OD') ||
+        wallLocationValue.includes('OUTSIDE') ||
+        wallLocationValue.includes('EXTERNAL') ||
+        wallLocationValue.includes('EXT') ||
+        wallLocationValue.includes('OUTER');
+
+      const isInternal =
+        wallLocationValue.includes('ID') ||
+        wallLocationValue.includes('INSIDE') ||
+        wallLocationValue.includes('INTERNAL') ||
+        wallLocationValue.includes('INT');
+
+      if (!hasWallLocation || !isAllowedStatus || isInternal || !isExternal) {
+        return false;
+      }
+
+      return true;
+    });
   };
 
   // Toggle parametric distribution line on the chart
@@ -173,6 +245,7 @@ export default function App() {
         {/* Section 1: Data Ingestion & Depth Variable */}
         <DataIngestion
           csvData={csvData}
+          rawCsvData={rawCsvData}
           columns={columns}
           columnMapping={columnMapping}
           onUpdateMapping={(mapping) => {
@@ -222,6 +295,7 @@ export default function App() {
           <ModelMetricsTable
             results={results}
             wallThickness={wallThickness}
+            maxApprovedObservedDepth={maxApprovedObservedDepth}
           />
         )}
       </main>

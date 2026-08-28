@@ -10,6 +10,7 @@ import { ColumnMapping } from '../types';
 
 interface DataIngestionProps {
   csvData: any[];
+  rawCsvData: any[];
   columns: string[];
   columnMapping: ColumnMapping;
   onUpdateMapping: (mapping: ColumnMapping) => void;
@@ -24,6 +25,7 @@ interface DataIngestionProps {
 
 export const DataIngestion: React.FC<DataIngestionProps> = ({
   csvData,
+  rawCsvData,
   columns,
   columnMapping,
   onUpdateMapping,
@@ -37,6 +39,8 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'full' | 'processed'>('processed');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [wallThicknessDraft, setWallThicknessDraft] = useState<string>(String(wallThickness));
   const [pipeODDraft, setPipeODDraft] = useState<string>(String(pipeOD));
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +120,50 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
 
   const totalEvaluated = observedCount + censoredCount;
   const censoredPercent = totalEvaluated > 0 ? ((censoredCount / totalEvaluated) * 100).toFixed(1) : '0';
+
+  const getComparableValue = (value: unknown): number | string => {
+    if (value === undefined || value === null || value === '') return Number.NEGATIVE_INFINITY;
+    if (typeof value === 'number') return value;
+    const parsed = parseFloat(String(value).replace(/[^0-9.\-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : String(value).trim();
+  };
+
+  const handleSort = (column: string) => {
+    setSortConfig((current) => {
+      if (!current || current.key !== column) {
+        return { key: column, direction: 'asc' };
+      }
+      return { key: column, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+    });
+  };
+
+  const previewRows = previewMode === 'full' ? rawCsvData : csvData;
+  const previewColumns = previewRows.length > 0 ? Object.keys(previewRows[0] as Record<string, unknown>) : columns;
+
+  const sortedRows = [...previewRows].sort((rowA, rowB) => {
+    if (!sortConfig) return 0;
+
+    const a = getComparableValue(rowA[sortConfig.key]);
+    const b = getComparableValue(rowB[sortConfig.key]);
+
+    if (typeof a === 'number' && typeof b === 'number') {
+      return sortConfig.direction === 'asc' ? a - b : b - a;
+    }
+
+    const left = String(a).toLowerCase();
+    const right = String(b).toLowerCase();
+    const comparison = left.localeCompare(right);
+    return sortConfig.direction === 'asc' ? comparison : -comparison;
+  });
+
+  const pageSize = 15;
+  const [currentPage, setCurrentPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const paginatedRows = sortedRows.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [csvData, rawCsvData, previewMode, sortConfig]);
 
   return (
     <div className="bg-zinc-950 border border-orange-900/40 rounded-lg shadow-xl p-5 sm:p-6 transition-all text-gray-300 font-sans">
@@ -319,43 +367,103 @@ export const DataIngestion: React.FC<DataIngestionProps> = ({
               className="flex items-center space-x-1.5 text-xs text-zinc-500 hover:text-zinc-300 font-mono py-1 transition-colors cursor-pointer"
             >
               {showPreview ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              <span>{showPreview ? 'Hide Raw CSV Rows' : 'View Sample Data Rows (5 Rows)'}</span>
+              <span>{showPreview ? 'Hide CSV Table' : 'View Uploaded CSV Table'}</span>
             </button>
 
             {showPreview && (
-              <div className="mt-2 overflow-x-auto border border-zinc-800 rounded bg-black">
-                <table className="min-w-full divide-y divide-zinc-800 text-left text-xs font-mono">
-                  <thead className="bg-zinc-900 text-zinc-400">
-                    <tr>
-                      {columns.map((col) => (
-                        <th
-                          key={col}
-                          className={`px-3 py-2 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap ${
-                            col === columnMapping.depthColumn ? 'text-orange-500 bg-orange-950/20' : ''
-                          }`}
-                        >
-                          {col} {col === columnMapping.depthColumn && '★ (DEPTH)'}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-900 text-zinc-300">
-                    {csvData.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-zinc-900/50">
-                        {columns.map((col) => (
-                          <td
+              <div className="mt-2 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('processed')}
+                    className={`px-2.5 py-1 rounded border text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                      previewMode === 'processed'
+                        ? 'border-orange-500 bg-orange-950/30 text-orange-300'
+                        : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-orange-500/60 hover:text-orange-300'
+                    }`}
+                  >
+                    Processed CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('full')}
+                    className={`px-2.5 py-1 rounded border text-[10px] font-mono uppercase tracking-wider transition-colors ${
+                      previewMode === 'full'
+                        ? 'border-orange-500 bg-orange-950/30 text-orange-300'
+                        : 'border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-orange-500/60 hover:text-orange-300'
+                    }`}
+                  >
+                    Full CSV
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto border border-zinc-800 rounded bg-black">
+                  <table className="min-w-full divide-y divide-zinc-800 text-left text-xs font-mono">
+                    <thead className="bg-zinc-900 text-zinc-400">
+                      <tr>
+                        {previewColumns.map((col) => (
+                          <th
                             key={col}
-                            className={`px-3 py-1.5 whitespace-nowrap ${
-                              col === columnMapping.depthColumn ? 'text-orange-400 font-bold bg-orange-950/10' : ''
+                            className={`px-3 py-2 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap ${
+                              col === columnMapping.depthColumn ? 'text-orange-500 bg-orange-950/20' : ''
                             }`}
                           >
-                            {row[col] !== undefined ? String(row[col]) : '—'}
-                          </td>
+                            <button
+                              type="button"
+                              onClick={() => handleSort(col)}
+                              className="flex items-center gap-1 hover:text-zinc-200 text-left transition-colors cursor-pointer"
+                            >
+                              <span>{col}</span>
+                              {sortConfig?.key === col && (
+                                <span className="text-orange-400">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                              )}
+                              {col === columnMapping.depthColumn && <span className="text-orange-400">★</span>}
+                            </button>
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900 text-zinc-300">
+                      {paginatedRows.map((row, idx) => (
+                        <tr key={`${JSON.stringify(row)}-${idx}`} className="hover:bg-zinc-900/50">
+                          {previewColumns.map((col) => (
+                            <td
+                              key={`${col}-${idx}`}
+                              className={`px-3 py-1.5 whitespace-nowrap ${
+                                col === columnMapping.depthColumn ? 'text-orange-400 font-bold bg-orange-950/10' : ''
+                              }`}
+                            >
+                              {row[col] !== undefined ? String(row[col]) : '—'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {sortedRows.length > pageSize && (
+                    <div className="flex items-center justify-between border-t border-zinc-800 bg-zinc-950 px-3 py-2 text-[10px] font-mono text-zinc-400">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                        disabled={currentPage === 0}
+                        className="px-2 py-1 rounded border border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-orange-500 hover:text-orange-300 transition-colors"
+                      >
+                        Prev
+                      </button>
+                      <span>
+                        Page {currentPage + 1} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={currentPage >= totalPages - 1}
+                        className="px-2 py-1 rounded border border-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed hover:border-orange-500 hover:text-orange-300 transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
