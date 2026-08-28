@@ -68,7 +68,43 @@ export default function App() {
   const [plotType, setPlotType] = useState<PlotType>('pdf');
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
 
-  const maxApprovedObservedDepth = csvData.reduce((maxDepth, row) => {
+  const normalizeCell = (value: unknown): string => {
+    if (value === undefined || value === null) return '';
+    return String(value).trim();
+  };
+
+  const normalizeToken = (value: string): string => value.replace(/[\s_-]+/g, '').toUpperCase();
+
+  const approvedExternalDepths = rawCsvData.filter((row) => {
+    const wallLocationKey = Object.keys(row || {}).find((key) =>
+      /wall.*(loc|position)|loc.*wall|wall[-_ ]?location|location/i.test(key)
+    );
+    const statusKey = Object.keys(row || {}).find((key) => /status|approval|state/i.test(key));
+
+    if (!wallLocationKey || !statusKey) {
+      return false;
+    }
+
+    const wallLocation = normalizeCell(row[wallLocationKey]);
+    const status = normalizeCell(row[statusKey]);
+    const wallLocationValue = normalizeToken(wallLocation);
+    const statusValue = normalizeToken(status);
+
+    if (!wallLocationValue || !statusValue) {
+      return false;
+    }
+
+    const isExternal =
+      wallLocationValue.includes('OD') ||
+      wallLocationValue.includes('OUTSIDE') ||
+      wallLocationValue.includes('EXTERNAL') ||
+      wallLocationValue.includes('EXT') ||
+      wallLocationValue.includes('OUTER');
+
+    return statusValue === 'APPROVED' && isExternal;
+  });
+
+  const maxApprovedObservedDepth = approvedExternalDepths.reduce((maxDepth, row) => {
     const rawDepth = row[columnMapping.depthColumn];
     if (rawDepth === undefined || rawDepth === null || rawDepth === '') {
       return maxDepth;
@@ -161,13 +197,6 @@ export default function App() {
     setColumnMapping(newMapping);
     executeAnalysis(filteredData, newMapping, censoringConfig, kdeConfig, wallThickness, pipeOD);
   };
-
-  const normalizeCell = (value: unknown): string => {
-    if (value === undefined || value === null) return '';
-    return String(value).trim();
-  };
-
-  const normalizeToken = (value: string): string => value.replace(/[\s_-]+/g, '').toUpperCase();
 
   const filterCorrosionRows = (rows: any[]) => {
     if (!rows || rows.length === 0) return rows;

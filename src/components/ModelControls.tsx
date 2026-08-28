@@ -207,9 +207,18 @@ export const ModelControls: React.FC<ModelControlsProps> = ({
                   values above 1.0 smooth the density more aggressively for a cleaner executive view.
                 */}
                 <div className="mt-2.5">
-                  <div className="flex justify-between text-[10px] text-zinc-600 font-mono">
+                  <div className="flex justify-between items-center text-[10px] text-zinc-600 font-mono">
                     <span>Narrow (0.5x)</span>
-                    <span>Smooth (2.5x)</span>
+                    <span className="flex items-center gap-1">
+                      <span>Smooth (2.5x)</span>
+                      <span
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-zinc-600 text-[10px] text-zinc-400 hover:border-orange-400 hover:text-orange-300 cursor-help"
+                        title="Silverman's rule is often a good default for moderate sample sizes because it balances bias and variance. Scott's rule is more conservative and can be useful when data are more nearly Gaussian or when you want a smoother fit."
+                        aria-label="Bandwidth rule explanation"
+                      >
+                        i
+                      </span>
+                    </span>
                   </div>
                   <input
                     id="bw-multiplier-slider"
